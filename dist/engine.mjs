@@ -8,9 +8,9 @@ export class RunEngine{
   this.usedRescues=0;this.lastRescue=null;this.lane=0;this.x=0;
   this.height=0;this.jump=0;this.vy=0;this.grounded=true;this.jumpTime=0;this.duckTime=0;
   this.shield=1.5;this.boostTime=0;this.boostDuration=0;this.landingStarted=false;this.landingClearUntil=0;this.speed=speedAt(0,settings.pace);
-  this.obstacles=[];this.coins=[];this.platforms=[];this.nextSpawn=4;
+  this.obstacles=[];this.coins=[];this.platforms=[];this.nextSpawn=4;this.obstacleWaves=0;
   this.nextHeight=2;this.heightSections=0;this.heightZoneUntil=0;
-  this.nextGate=25;this.gateShown=false;this.mathKind=null;this.questionAssisted=false;this.result=null;
+  this.nextGate=25;this.gateShown=false;this.mathKind=null;this.questionAssisted=false;this.questionMistakes=0;this.result=null;
   this.events.push({type:'countdown',value:3});
  }
  drain(){return this.events.splice(0);}
@@ -25,15 +25,17 @@ export class RunEngine{
  clear(keepSurface=false){this.obstacles=[];this.coins=[];if(!keepSurface)this.platforms=[];this.events.push({type:'clear',keepSurface});}
  spawnObstacle(kind,lane,z,baseY=0,flightOnly=false){
   const o={id:++this.id,type:kind,lane,z,length:kind==='dragon'?5.9:1.4,baseY,flightOnly};
-  this.obstacles.push(o);this.events.push({...o,type:'obstacle',kind});return o;
+  this.obstacles.push(o);this.events.push({...o,type:'obstacle',kind});
+  if(kind==='arch'&&!flightOnly)for(const offset of [4,2,0,-2,-4])this.spawnCoin(lane,z+offset,baseY+.6,true);
+  return o;
  }
- spawnCoin(lane,z,y=.95){const c={id:++this.id,lane,z,y};this.coins.push(c);this.events.push({...c,type:'coin'});return c;}
+ spawnCoin(lane,z,y=.95,requiresDuck=false){const c={id:++this.id,lane,z,y,requiresDuck};this.coins.push(c);this.events.push({...c,type:'coin'});return c;}
  spawnHeightSection(speed){
   const lane=this.heightSections===0?0:Math.floor(this.rng()*3)-1;
   const routes=makeHeightSection(speed,this.heightSections,lane);
   for(const spec of routes){
    const p={...spec,id:++this.id};this.platforms.push(p);this.events.push({...p,type:'platform'});
-   for(let local=p.length/2-2;local>-p.length/2+2;local-=3.5){const y=routeHeightAtLocal(p,local)+.95;this.spawnCoin(lane,p.z+local,y);}
+   for(let local=p.length/2-2;local>-p.length/2+2;local-=3.5){if(this.heightSections>=2&&this.heightSections%2===0&&spec===routes[0]&&Math.abs(local)<5)continue;const y=routeHeightAtLocal(p,local)+.95;this.spawnCoin(lane,p.z+local,y);}
   }
   if(this.heightSections>=2){const p=routes[0];this.spawnObstacle(this.heightSections%2?'cloud':'arch',lane,p.z,p.height);}
   const last=routes.at(-1);this.heightZoneUntil=this.elapsed+(-last.z+last.length/2)/speed+1;
@@ -57,7 +59,7 @@ export class RunEngine{
   this.platforms=this.platforms.filter(o=>o.z-o.length/2<20);
  }
  collectCoins(){
-  for(const c of this.coins){if(!c.collected&&Math.abs(c.z)<1.1&&Math.abs(this.x-c.lane*LANE_WIDTH)<.95&&Math.abs(this.height+.95-(c.y??.95))<1.2){c.collected=true;this.stars++;this.events.push({type:'collected',id:c.id});}}
+  for(const c of this.coins){if(!c.collected&&(!c.requiresDuck||this.duckTime>0&&this.grounded)&&Math.abs(c.z)<1.1&&Math.abs(this.x-c.lane*LANE_WIDTH)<.95&&Math.abs(this.height+.95-(c.y??.95))<1.2){c.collected=true;this.stars++;this.events.push({type:'collected',id:c.id});}}
   this.coins=this.coins.filter(c=>!c.collected);
  }
  updateHeight(dt){
@@ -112,12 +114,15 @@ export class RunEngine{
   if(this.elapsed>=this.landingClearUntil&&this.elapsed>=this.nextSpawn&&this.elapsed>this.heightZoneUntil&&this.nextGate-this.elapsed>11){
    this.nextSpawn=this.elapsed+obstacleGap(this.elapsed,this.settings.pace);
    const pattern=generatePattern(this.elapsed,this.settings.pace,this.rng);
+   // A regular duck route, with the alternative lane still free.
+   if(this.obstacleWaves++%3===0)pattern[0].type='arch';
    for(const item of pattern)this.spawnObstacle(item.type,item.lane,-65);
    const open=[-1,0,1].filter(l=>!pattern.some(o=>o.lane===l)),lane=open[Math.floor(this.rng()*open.length)];
-   for(let i=0;i<5;i++)this.spawnCoin(lane,-65-i*2);
+   if(!pattern.some(o=>o.type==='arch'))for(let i=0;i<5;i++)this.spawnCoin(lane,-65-i*2);
   }
   if(!this.updateHeight(dt))return;
   for(const o of this.obstacles){
+   if(o.type==='arch'&&!o.flightOnly&&!o.cueShown&&o.z<0&&o.z>-speed*1.5&&Math.abs(this.x-o.lane*LANE_WIDTH)<.95){o.cueShown=true;this.events.push({type:'duckTrail'});}
    if(Math.abs(o.z)>=o.length/2+.3||Math.abs(this.x-o.lane*LANE_WIDTH)>=.92||this.shield>0)continue;
    const base=o.baseY||0,relative=this.height-base,top=o.type==='arch'?3.5:o.type==='dragon'?2.25:1.15;
    if(this.height>base+top+.1||this.height+2.6<base)continue;
@@ -126,10 +131,10 @@ export class RunEngine{
   }
   this.collectCoins();
  }
- openMath(kind){this.clear();this.resetHeight();this.mode='math';this.mathKind=kind;this.questionAssisted=false;this.events.push({type:'math',kind});}
+ openMath(kind){this.clear();this.resetHeight();this.mode='math';this.mathKind=kind;this.questionAssisted=false;this.questionMistakes=0;this.events.push({type:'math',kind});}
  answer(correct){
   if(this.mode!=='math')return;
-  if(!correct){this.wrong++;this.questionAssisted=true;if(this.mathKind==='rescue')this.finish('answer');return;}
+  if(!correct){this.wrong++;this.questionMistakes++;this.questionAssisted=true;if(this.mathKind==='rescue')this.finish('answer');else if(this.questionMistakes>=2){this.mode='math-wrong';this.events.push({type:'wrongAnswer'});}else this.events.push({type:'answerRetry'});return;}
   this.solved++;if(!this.questionAssisted)this.independent++;
   const reward=this.questionAssisted?2:5;this.stars+=reward;
   if(this.mathKind==='rescue'){
@@ -141,6 +146,7 @@ export class RunEngine{
    this.nextGate=this.elapsed+35+this.rng()*8;this.gateShown=false;this.spawnBoostCourse();this.events.push({type:'boost',reward});
   }
  }
+ completeWrong(){if(this.mode!=='math-wrong')return;this.mode='math';this.skip();}
  timeOut(){if(this.mode!=='math')return;this.mode='math-timeout';this.timedOut++;this.events.push({type:'mathTimeout',kind:this.mathKind});}
  completeTimeout(){if(this.mode!=='math-timeout')return;if(this.mathKind==='rescue')this.finish('timeout');else{this.mode='math';this.skip();}}
  skip(){
