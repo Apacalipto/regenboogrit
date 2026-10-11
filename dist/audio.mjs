@@ -1,0 +1,5 @@
+export class MagicAudio{
+ constructor(){this.enabled=true;this.ctx=null;}
+ unlock(){if(!this.enabled)return;try{this.ctx??=new(window.AudioContext||window.webkitAudioContext)();if(this.ctx.state==='suspended')this.ctx.resume();}catch{}}
+ play(kind){if(!this.enabled||!this.ctx)return;const patterns={coin:[[880,0,.10],[1320,.06,.13]],jump:[[440,0,.1],[660,.06,.12]],duck:[[380,0,.1],[280,.08,.1]],boost:[[523,0,.16],[659,.1,.16],[784,.2,.16],[1047,.3,.38]],correct:[[659,0,.14],[880,.13,.25]],countdown:[[440,0,.12]],start:[[523,0,.1],[784,.12,.25]],end:[[659,0,.18],[523,.2,.18],[392,.4,.35]]};const notes=patterns[kind]||patterns.correct;for(const [freq,delay,duration]of notes){const o=this.ctx.createOscillator(),gain=this.ctx.createGain(),t=this.ctx.currentTime+delay;o.type='sine';o.frequency.setValueAtTime(freq,t);gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.07,t+.015);gain.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(gain);gain.connect(this.ctx.destination);o.start(t);o.stop(t+duration+.03);}}
+}
