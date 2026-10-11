@@ -18,7 +18,7 @@ test('a new question resets its attempts; rescue still requires one correct answ
  e.openMath('rescue');e.answer(false);assert.equal(e.mode,'end');assert.equal(e.result.reason,'answer');assert.equal(e.usedRescues,0);
 });
 test('stars really lie underneath an arch and are earned by ducking at every speed and frame rate',()=>{
- for(const pace of ['calm','adventure'])for(const elapsed of [0,60,600])for(const fps of [20,60,120]){
+ for(const pace of ['easy','normal','hard'])for(const elapsed of [0,60,600])for(const fps of [20,60,120]){
   const e=run(pace,elapsed);e.spawnObstacle('arch',0,-7);assert.equal(e.coins.length,5);
   assert(e.coins.every(c=>c.lane===0&&c.y===.6&&c.requiresDuck));assert(e.coins.some(c=>c.z===-7));
   e.action('duck');advance(e,1.4,fps);assert.equal(e.mode,'run',pace+' '+elapsed+' '+fps);assert.equal(e.stars,5);

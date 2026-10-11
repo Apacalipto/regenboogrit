@@ -16,7 +16,7 @@ test('flight height and forward speed ease to zero vertical velocity and normal 
  }
 });
 test('boost descent and three-second landing runway are clear in every lane at every difficulty and frame rate',()=>{
- for(const pace of ['calm','adventure'])for(const elapsed of [0,25,60,120,600])for(const assisted of [false,true])for(const fps of [20,30,60,120]){
+ for(const pace of ['easy','normal','hard'])for(const elapsed of [0,25,60,120,600])for(const assisted of [false,true])for(const fps of [20,30,60,120]){
   const e=run(pace,elapsed);e.openMath('boost');e.questionAssisted=assisted;e.answer(true);let descentFrames=0,landings=0,previousSpeed=e.speed;
   while(e.mode==='boost'){
    e.step(1/fps);for(const event of e.drain())if(event.type==='landing')landings++;
@@ -41,7 +41,7 @@ test('pausing during descent freezes position, protection and flight pose',()=>{
  const snapshot=[e.elapsed,e.distance,e.height,e.boostTime,e.flightPose];for(let i=0;i<120;i++)e.step(1/60);assert.deepEqual([e.elapsed,e.distance,e.height,e.boostTime,e.flightPose],snapshot);
  e.resume();for(let i=0;i<180;i++)e.step(1/60);assert.equal(e.mode,'run');assert.equal(e.height,0);
 });
-test('a new rekenpoort never teleports an airborne unicorn or removes its supporting roof',()=>{
+test('a new math gate never teleports an airborne unicorn or removes its supporting roof',()=>{
  const e=run();e.nextGate=4.81;e.height=2.6;e.platforms=[{lane:0,z:0,length:40,height:2.6,rampIn:0,rampOut:0}];e.step(.02);
  assert(e.gateShown);assert(e.height>2.5);assert.equal(e.platforms.length,1);assert(e.drain().some(x=>x.type==='clear'&&x.keepSurface));
  const j=run();j.nextGate=4.81;j.height=1.8;j.grounded=false;j.vy=-2;j.step(.02);assert(j.height>1.7);assert.equal(j.mode,'run');

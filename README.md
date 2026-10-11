@@ -1,47 +1,101 @@
-# Regenboogrit
+# Rainbow Ride (Regenboogrit)
 
-Een mobiele Three.js-game: een eenhoorn rent over een regenboog langs wolkenkastelen. Rekenen geeft een veilige boost.
+A mobile-friendly Three.js game: ride a unicorn along a rainbow, explore cloud castles and dragon backs, and solve arithmetic questions to earn a safe flying boost.
 
-## Starten
+## Run locally
 
-Node.js is voldoende; alle gamecode en Three.js staan lokaal in dist.
+Node.js is sufficient. Game code and Three.js are included in `dist/`; no install or build is required.
 
-    node server.mjs
+```sh
+node server.mjs
+```
 
-Open http://localhost:4173. Op hetzelfde wifi-netwerk kan ook het LAN-adres van deze computer met poort 4173 worden gebruikt, mits de firewall dit toestaat. De privéversie wordt via Sites gepubliceerd.
+Open http://localhost:4173. A device on the same Wi-Fi network can use the computer's LAN address and port 4173 if its firewall allows it. The hosted version is published through Sites.
 
-## Spelen
+## Language and controls
 
-Veeg links/rechts om van baan te wisselen, omhoog om te springen en omlaag om te bukken. Er zijn ook grote aanraakknoppen. Op een computer werken pijltjestoetsen, WASD en spatie. Escape pauzeert. Onder elfjesbogen liggen vijf lage sterren die je alleen bukkend verzamelt, ook bovenop verhoogde routes. Minstens iedere derde gewone obstakelrij bevat een boog; er blijft altijd een vrije uitwijkbaan.
+The first launch asks the player to choose Dutch or English. The choice is saved and can be changed using the NL/EN menu button. Menus, instructions, questions, hints, feedback, accessibility labels, results, and number formatting follow the selected language. Saved review questions are translated when shown; changing language preserves progress and records.
 
-Je kiest eerst een groep (3–8). Alle passende soorten sommen staan standaard aan en kunnen los worden uitgevinkt. De standaard is begin groep 5: plus en min onder 100, kleine tafels met beide factoren 1–5 en bijpassende deelsommen. Alleen de tafels hebben dus maximaal 25 als uitkomst. De standaard avonturenrit wordt al vroeg duidelijk sneller: circa 46% boven de startsnelheid na 30 actieve seconden, 77% na één minuut en ruim tweemaal zo snel na twee minuten. Daarna loopt de snelheid verder op tot het maximum bij tien minuten. Obstakels volgen elkaar ook eerder sneller op; de rustige stand blijft rustig. Onder het ingeklapte menu Geavanceerde instellingen staan de rekentimer en de optionele rustige rit. De rekentimer heeft vier standen: Oefenen (onbeperkt), Rustig (60 seconden), Vlot (30 seconden, standaard) en Uitdaging (15 seconden). Bij de overgang naar de groepskeuze wordt eenmalig de passende oefenmix aangezet. Bestaande eigen keuzes voor racestand en timer blijven bewaard. Vanaf deze versie worden ook uitgevinkte onderdelen en eigen getallenbereiken bewaard. De timer geldt per som, ook voor reddingsvragen, en pauzeert als de pagina niet zichtbaar is. Bij een gewone som toont een verlopen timer het juiste antwoord en gaat de rit zonder boost verder; bij een reddingssom eindigt de rit. Een ingediend goed antwoord stopt de timer direct, ook tijdens de beloningsanimatie. De speler kiest zelf wanneer moeilijkere stof aan bod komt.
+Swipe left/right to change lanes, up to jump, and down to duck. Large touch buttons are also available. Desktop controls support arrow keys, WASD, and Space; Escape pauses. Fairy arches contain five low stars that can only be collected while ducking, including on raised routes. At least every third ordinary obstacle row includes an arch, with a clear escape lane.
 
-Onder Sommen en tafels aanpassen kies je de bovengrens voor plus/min: 10, 20, 50, 100, 1.000, 10.000 of een eigen heel getal van 2–10.000. Beide getallen en de uitkomst blijven strikt onder die grens en zijn nooit negatief. Tafels 1–10 zijn afzonderlijk te selecteren, met factoren tot 3, 5 of 10. Delen gebruikt dezelfde selectie omgekeerd. Zonder geselecteerde somsoort, of zonder tafel terwijl Tafels/Delen aanstaat, kun je niet starten. Herstel standaard zet de groepskeuze terug inclusief bereik en tafels; timer en racesnelheid veranderen daarbij niet.
+## Speed and timer
 
-Standaard per groep: groep 3 plus/min onder 20; groep 4 plus/min onder 100 en tafels 1, 2, 5, 10 tot factor 5; groep 5 de hierboven beschreven instapmix; groep 6 alle tafels, plus/min onder 1.000, delen en eenvoudige breuken; groep 7 dezelfde basis met kommagetallen en procenten; groep 8 ook plus/min onder 10.000 en uitgebreidere breuken en procenten. Groepen zijn instelbare oefenprofielen, geen beoordeling van het volledige schoolniveau. Het eigen getallenbereik geldt voor de gewone plus/minsommen; kommagetallen, breuken en procenten volgen het gekozen groepsprofiel.
+Advanced settings contain three increasingly fast adventure modes:
 
-Regenbooghellingen leiden naar verhoogde wolkenroutes en drakenruggen. De eerste route heeft een helling omhoog en omlaag; latere routes hebben echte gaten waarover je kunt springen, en obstakels op het dak. De volgende route heeft een opvanghelling, zodat een gemiste sprong ook naar een veilige lagere landing kan leiden. De overgangen tussen helling en dak zijn afgerond. Je kunt ook een vrije baan op de gewone regenboog volgen. Als je van een verhoogde route afstapt, val je terug naar beneden. Gewone draken zonder regenboogpad zijn obstakels.
+| Mode | Original adventure speed | Starting speed | Maximum after ten active minutes |
+| --- | --- | --- | --- |
+| Easy | 100% | 12 | 34 |
+| Normal (default) | 120% | 14.4 | 40.8 |
+| Hard | 150% | 18 | 51 |
 
-Een eerste zelfstandig goed antwoord bij een rekenpoort geeft 4 seconden veilige boost met maximaal driemaal de snelheid en 5 sterren. Tijdens de boost stijgt de eenhoorn tot zes wereldeenheden en vliegt zichtbaar over rijen draken, wolken en elfjesbogen. De camera volgt mee omhoog. Na hulp, of na één fout antwoord gevolgd door een goed antwoord, wordt de boost 2,5 seconden met 2 sterren. Na twee fout ingediende antwoorden toont het spel de juiste uitkomst en blijft de rekensom staan totdat je op Verder over de regenboog drukt. Je gaat dan op de grond verder zonder boost of rekenbeloning. Iedere nieuwe som begint opnieuw met twee pogingen. De bestaande rekentimer blijft tijdens de herkansing doorlopen en stopt zodra de uitkomst wordt getoond. Beide boosts krijgen aansluitend een aparte daling van 1,6 seconde: hoogte en snelheid gaan geleidelijk terug, de vleugels vouwen in en de benen gaan weer lopen. Alle boostobstakels zijn vóór de daling gepasseerd en daarna is er drie seconden vrije baan met bescherming. De natuurkundige simulatie gebruikt kleine tijdstappen, ook bij een lagere beeldsnelheid. Een naderende rekenpoort zet een sprong niet meer plotseling terug op de grond. Lastige sommen komen na tussenliggende vragen terug. Na een crash kan één goede som maximaal drie keer per rit een redding opleveren. Een nieuwe botsing binnen vijf actieve seconden na redding beëindigt de rit. Een verkeerde reddingssom beëindigt de rit ook. Aftellen, rekenen en pauzeren tellen niet mee voor actieve racetijd.
+Speeds are world units per second before boosts. Each multiplier applies to the entire speed curve. Speed rises about 46% above its starting value after 30 active seconds, 77% after one minute, and more than doubles after two minutes. Obstacle frequency also increases. Pauses, countdowns, and questions do not count as active running time.
 
-Op het eindscherm staat een groot blok Jouw highscore, naast de afstand van de zojuist gespeelde rit. Een lagere nieuwe score overschrijft het record niet. Highscores worden per groep, geselecteerde somsoorten, actieve getallengrenzen, racestand en rekentimer bewaard. Oude scores blijven in de opslag behouden; nieuwe oefencombinaties hebben hun eigen record. Herhalingsvragen gebruiken dezelfde profielgrens: een oude lastige som uit een uitgeschakeld onderdeel komt niet tussendoor terug. Sterren, kleuren, instellingen en rekenvoortgang staan alleen in de lokale browseropslag. Verschillende apparaten delen deze gegevens niet automatisch.
+The previous adventure setting migrates to Normal; the previous calm setting migrates to Easy. Existing adventure records remain accessible under Easy. Each mode has separate records.
 
-## Bestanden
+The arithmetic timer defaults to 30 seconds. Options are Practice (unlimited), Relaxed (60 seconds), Quick (30 seconds), and Challenge (15 seconds). It applies per question, including rescues, and pauses while the page is hidden. Correct answers stop it immediately. Expiry on an ordinary question reveals the answer and continues without a boost; expiry on a rescue question ends the run.
 
-- dist/app.mjs: menu, invoer, rekenvensters en bewaren
-- dist/engine.mjs: tijd, beweging, botsingen, boosts en reddingen
-- dist/course.mjs: hoogtes, hellingen, verhoogde routes en vluchtpad
-- dist/rules.mjs: instellingen, migratie, profielherkenning en moeilijkheid
-- dist/practice.mjs: groepsprofielen, onderdeelkeuze en opgavengenerator
-- dist/timer.mjs: pauzeerbare rekentimer
-- dist/world.mjs: procedurele 3D-modellen en camera
-- dist/audio.mjs: zachte geluiden via Web Audio
-- dist/vendor: Three.js r180 en MIT-licentie
+## Arithmetic practice
 
-De 3D-modellen zijn lokaal gegenereerd uit geometrie. Fonts hebben systeemlettertypen als fallback.
+Choose a Dutch school group from 3 to 8, then turn individual topics off or on. These are adjustable practice profiles, not an assessment of the full curriculum. English uses the same Dutch group profiles.
 
-## Controleren
+| Group | Default practice |
+| --- | --- |
+| 3 | Addition and subtraction below 20 |
+| 4 | Addition/subtraction below 100; tables 1, 2, 5, and 10 with factors up to 5 |
+| 5 (default) | Addition/subtraction below 100; tables 1-5 with factors up to 5; matching division |
+| 6 | Addition/subtraction below 1,000; all tables; division; simple fractions |
+| 7 | Group 6 topics, plus decimals and percentages |
+| 8 | Addition/subtraction below 10,000; all tables; division; wider fraction and percentage practice; decimals |
 
-    node --test
+All appropriate topics start enabled when a group is selected. The default is a gentle beginning-of-group-5 mix, with both multiplication factors from 1 to 5. The player decides when to try harder material.
 
-De controles omvatten rekenbereiken, cijferinvoer, botsingen, boosts, alle reddingsgrenzen, een twaalfminutenrit, hellingen, springen tussen daken, hoogtebotsingen, zichtbare boostpassages, obstakelvrije landingen op 20/30/60/120 beelden per seconde, vroege snelheidsopbouw, buksterren, één herkansing en de camerakadrering op smalle telefoonschermen. De UI-logica wordt ook getest met een nagebootste DOM: twee fouten gevolgd door verder lopen, de kleinere boost bij een goede herkansing en blijvende highscores na herladen. De groepskeuze, alle combinaties van onderdelen, aangepaste grenzen, uitgesloten tafels, lege keuzes en instellingen na herladen zijn getest. Het nieuwe menu is daarnaast in de browser op telefoonformaat (390 × 844) gecontroleerd, inclusief instellingen aan/uit en bewaren na herladen. Aanraakbediening op een fysiek toestel blijft een handmatige controle.
+Customize addition/subtraction limits using 10, 20, 50, 100, 1,000, 10,000, or a whole number from 2 to 10,000. Operands and results stay strictly below that limit and are never negative. Select tables 1-10 individually, with factors up to 3, 5, or 10. Division reverses the selected multiplication facts. Decimals, fractions, and percentages follow the group profile rather than the whole-number limit.
+
+Starting is disabled without an enabled topic, or when tables/division are enabled without a selected table. Restore defaults resets group topics, limits, and tables while preserving timer, speed, and language. Choices persist after reloading. Review questions respect the active practice profile, so excluded topics and tables do not reappear.
+
+## Routes, boosts, and rescues
+
+Rainbow ramps lead onto cloud platforms and dragon backs. The first route has ramps up and down; later routes include gaps and rooftop obstacles. Catch ramps permit safe lower landings after missed jumps. Ramp transitions are smooth, and a clear lane on the base rainbow remains available. Leaving a raised route lets the unicorn fall back down. Dragons without a rainbow path are obstacles.
+
+A correct first answer gives a four-second boost, up to triple speed, and five stars. The unicorn rises six world units and visibly flies over dragons, clouds, and fairy arches while the camera follows. Using a hint, or answering correctly after one mistake, gives a smaller 2.5-second boost and two stars.
+
+After two wrong answers, the solution stays visible until the player chooses to continue on the ground without a boost or math reward. Each ordinary question starts with two attempts. The original timer continues during the retry and stops when the solution is revealed.
+
+Both boosts end with a separate 1.6-second descent: height and speed ease down, wings fold, and running resumes. Flight obstacles have passed before descent begins, followed by three seconds of protected clear runway. Physics uses small simulation steps to handle lower frame rates. Approaching a math gate does not abruptly cancel a jump.
+
+Difficult questions return after intervening questions. One correct rescue answer can continue a crashed run, up to three times. Another crash within five active seconds after a rescue ends the run. A wrong rescue answer also ends it.
+
+## Progress and records
+
+The end screen shows the latest distance and a prominent high score. A shorter run never overwrites a record. Records are separated by group, enabled topics, applicable limits, speed, and timer. Language is not part of a record's identity. Existing records remain stored when practice combinations change.
+
+Stars, unlocked coats, settings, arithmetic progress, and high scores are stored only in the current browser. Devices do not automatically share progress.
+
+## Source structure
+
+Source identifiers, comments, and documentation are English. Dutch translations live in a separate locale catalog. The first-launch picker intentionally shows both language names.
+
+- `dist/app.mjs`: menu, input, question dialogs, and persistence
+- `dist/engine.mjs`: timing, movement, collisions, boosts, and rescues
+- `dist/course.mjs`: ramps, raised routes, heights, and flight paths
+- `dist/rules.mjs`: settings, migration, profile identity, and difficulty
+- `dist/practice.mjs`: group profiles, topic selection, and question generation
+- `dist/questions.mjs`: arithmetic data and localized prompts/hints
+- `dist/i18n.mjs`: translation, number formatting, and DOM localization
+- `dist/locales/nl.mjs`: Dutch translations keyed by English messages
+- `dist/timer.mjs`: pausable arithmetic timer
+- `dist/world.mjs`: procedural 3D models and camera
+- `dist/audio.mjs`: gentle Web Audio sounds
+- `dist/vendor/`: Three.js r180 and its MIT license
+
+Models are generated from geometry. Fonts have system fallbacks.
+
+## Verification
+
+```sh
+node --test
+```
+
+Tests cover arithmetic boundaries, input, collisions, boosts, rescue limits, a twelve-minute run, ramps, jumping between roofs, height collisions, visible flight clearance, safe landings at 20/30/60/120 FPS in all speed modes, early acceleration, duck-only stars, retries, and narrow-screen camera framing.
+
+Simulated DOM tests cover question flows, assisted boosts, persistent records, practice customization, reload persistence, first-launch language selection, English feedback and decimal input, translated saved reviews, and speed selection. Translation checks validate static message coverage and placeholder consistency. Browser QA complements these tests; touch controls on a physical device still require manual checking.

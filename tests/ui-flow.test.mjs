@@ -1,8 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';
-import {RunEngine} from '../dist/engine.mjs';import * as rules from '../dist/rules.mjs';import * as timers from '../dist/timer.mjs';
+import {RunEngine} from '../dist/engine.mjs';import * as rules from '../dist/rules.mjs';import * as timers from '../dist/timer.mjs';import * as i18n from '../dist/i18n.mjs';import * as questions from '../dist/questions.mjs';
 const source=readFileSync(new URL('../dist/app.mjs',import.meta.url),'utf8').replace(/^import .*;$/gm,'');
 const markup=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
-function ui(saved=new Map()){
+function ui(saved=new Map(),chooseDefaultLanguage=true){
  const nodes=new Map(),events={},timeouts=new Map();let tid=0,now=0,document;
  class Element{
   constructor(id=''){this.id=id;this.hidden=false;this.disabled=false;this.dataset={};this.style={};this.children=[];this.textContent='';this.attributes={};this.parentElement=null;this.className='';const classes=new Set();this.classList={add:(...c)=>c.forEach(x=>classes.add(x)),remove:(...c)=>c.forEach(x=>classes.delete(x)),toggle:(c,on)=>on?classes.add(c):classes.delete(c),contains:c=>classes.has(c)};}
@@ -11,12 +11,13 @@ function ui(saved=new Map()){
  }
  for(const match of markup.matchAll(/\bid="([^"]+)"/g))nodes.set(match[1],new Element(match[1]));
  const digits=Array.from('1234567890,').map(d=>{const b=new Element();b.dataset.digit=d;return b;});nodes.get('math-numpad').append(...digits);nodes.get('math-modal').append(nodes.get('math-numpad'),nodes.get('answer-button'),nodes.get('math-skip'));
- const modals=['math-modal','end-modal','help-modal','collection-modal','pause-modal'].map(id=>nodes.get(id));modals.forEach(e=>e.hidden=true);
- document={hidden:false,activeElement:new Element(),body:new Element(),getElementById:id=>nodes.get(id)||null,createElement:()=>new Element(),createTextNode:text=>({textContent:text}),querySelector:()=>new Element(),querySelectorAll:s=>s==='.modal'?modals:s==='[data-digit]'?digits:[],addEventListener:(k,f)=>events[k]=f};
- class World{constructor(){this.coins=[];this.scene={remove(){}};this.worldName='Wolkenkasteel';}setCoat(){}reset(){this.coins=[];}addObstacle(){return {};}addCoin(){const c={group:{}};this.coins.push(c);return c;}addPlatform(){}addGate(){}clearAhead(){this.coins=[];}move(){}update(){}}
+ const modals=['language-modal','math-modal','end-modal','help-modal','collection-modal','pause-modal'].map(id=>nodes.get(id));modals.forEach(e=>e.hidden=true);
+ document={documentElement:{lang:'en'},hidden:false,activeElement:new Element(),body:new Element(),getElementById:id=>nodes.get(id)||null,createElement:()=>new Element(),createTextNode:text=>({textContent:text}),querySelector:()=>new Element(),querySelectorAll:s=>s==='.modal'?modals:s==='[data-digit]'?digits:[],addEventListener:(k,f)=>events[k]=f};
+ class World{constructor(){this.coins=[];this.scene={remove(){}};this.worldName='Cloud Castle';}setCoat(){}reset(){this.coins=[];}addObstacle(){return {};}addCoin(){const c={group:{}};this.coins.push(c);return c;}addPlatform(){}addGate(){}clearAhead(){this.coins=[];}move(){}update(){}}
  class MagicAudio{unlock(){}play(){}}
- const context=vm.createContext({...rules,...timers,RunEngine,World,MagicAudio,document,window:{scrollTo(){}},performance:{now:()=>now},localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},requestAnimationFrame:()=>0,addEventListener:(k,f)=>events[k]=f,setTimeout:(fn,ms)=>{timeouts.set(++tid,{fn,ms});return tid;},clearTimeout:id=>timeouts.delete(id),console});
+ const context=vm.createContext({...rules,...timers,...i18n,...questions,RunEngine,World,MagicAudio,document,window:{scrollTo(){}},performance:{now:()=>now},localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},requestAnimationFrame:()=>0,addEventListener:(k,f)=>events[k]=f,setTimeout:(fn,ms)=>{timeouts.set(++tid,{fn,ms});return tid;},clearTimeout:id=>timeouts.delete(id),console});
  vm.runInContext(source,context);
+ if(chooseDefaultLanguage)vm.runInContext("if(!data.languageChosen)chooseLanguage('nl');",context);
  const exec=code=>vm.runInContext(code,context);
  const question=()=>exec("question");
  const enter=n=>{for(const d of String(n))exec('inputDigit('+JSON.stringify(d)+')');exec('submitAnswer()');};
@@ -61,4 +62,26 @@ test('custom upper bounds update actual questions; invalid input cannot start a 
 });
 test('previously queued mistakes cannot reintroduce a disabled subject or excluded table',()=>{
  const u=ui();u.exec("data.review=[{profile:profileKey(settings),wait:0,question:{key:'blocked',prompt:'5 × 5',topic:'tables',answer:25}}]");choose(u,'topic-chips','tables');choose(u,'topic-chips','divide');choose(u,'topic-chips','minus');for(let i=0;i<30;i++)assert.equal(u.exec('nextQuestion().topic'),'plus');assert.equal(u.exec('data.review.length'),1);
+});
+
+test('first launch requires language choice, then English persists without resetting practice or progress',()=>{
+ const u=ui(new Map(),false);assert.equal(u.exec('activeModal'),'language-modal');assert.equal(u.nodes.get('language-close').hidden,true);u.events.keydown({key:'Escape',preventDefault(){}});assert.equal(u.exec('activeModal'),'language-modal');
+ u.exec("data.bank=80;settings.tables=[3];settings.topics=['tables'];settings.range=37;");u.nodes.get('language-en').click();assert.equal(u.exec('activeModal'),null);assert.equal(u.exec('document.documentElement.lang'),'en');assert.equal(u.exec('data.languageChosen'),true);assert.equal(u.nodes.get('language-button').textContent,'EN');assert.equal(u.nodes.get('decimal-button').textContent,'.');assert.equal(u.nodes.get('topic-chips').children[0].textContent,'Addition');assert(u.nodes.get('practice-summary').textContent.startsWith('Table 3'));
+ const reload=ui(u.saved,false);assert.equal(reload.exec('activeModal'),null);assert.equal(reload.exec('settings.language'),'en');assert.equal(reload.exec('data.bank'),80);assert.equal(reload.exec('settings.range'),37);assert.equal(reload.exec('JSON.stringify(settings.tables)'),'[3]');
+ reload.nodes.get('language-button').click();assert.equal(reload.nodes.get('language-close').hidden,false);reload.nodes.get('language-nl').click();assert.equal(reload.exec('document.documentElement.lang'),'nl');assert.equal(reload.nodes.get('topic-chips').children[0].textContent,'Plus');assert.equal(reload.nodes.get('decimal-button').textContent,',');assert.equal(reload.exec('data.bank'),80);
+});
+test('English is used throughout hints, retries, wrong answers, rescues, timer and highscore feedback',()=>{
+ const u=ui(new Map(),false);u.nodes.get('language-en').click();u.startQuestion();assert.equal(u.nodes.get('math-title').textContent,'Cast a boost!');assert.equal(u.nodes.get('math-timer-label').textContent,'30 seconds left');
+ const q=u.question();u.enter(q.answer+1);assert(u.nodes.get('math-feedback').textContent.startsWith('Another try! '));u.enter(q.answer+2);assert(u.nodes.get('math-feedback').textContent.includes('without a boost'));assert.equal(u.nodes.get('math-skip').textContent,'Keep riding the rainbow →');u.nodes.get('math-skip').click();
+ u.exec("engine.openMath('rescue');processEvents();");assert.equal(u.nodes.get('math-title').textContent,'Help your unicorn carry on.');assert.equal(u.nodes.get('math-eyebrow').textContent,'ANOTHER CHANCE · 1 OF 3');
+ u.exec("engine.distance=1542;engine.finish('stop');processEvents();");assert.equal(u.nodes.get('end-best-distance').textContent,'1,542');assert(u.nodes.get('end-best').textContent.includes('Normal · 30 seconds · on this device'));assert.equal(u.nodes.get('end-reason').textContent,'Your unicorn is taking a break. Your stars are saved.');
+});
+test('a saved Dutch review question is shown in English after switching language',()=>{
+ const u=ui();u.exec("settings.group=6;settings.topics=['fraction'];data.review=[{profile:profileKey(settings),wait:0,question:{kind:'fraction',key:'fraction-12-4',answer:3,prompt:'¼ van 12',hint:'Verdeel 12 in 4 groepjes.'}}]");u.nodes.get('language-en').click();const q=u.exec('nextQuestion()');assert.equal(q.prompt,'¼ of 12');assert(q.hint.startsWith('Divide 12 by 4.'));
+});
+test('English decimal input uses a point while accepting either keyboard separator',()=>{
+ const u=ui();u.nodes.get('language-en').click();u.startQuestion();u.exec("answer='';inputDigit('2');inputDigit(',');inputDigit('5');");assert.equal(u.nodes.get('answer-display').textContent,'2.5');u.exec("inputDigit('.');");assert.equal(u.nodes.get('answer-display').textContent,'2.5');
+});
+test('speed buttons persist the selected difficulty and start the engine with it',()=>{
+ const u=ui();const buttons=u.nodes.get('pace-options').children;assert.equal(buttons.length,3);assert.equal(buttons.find(b=>b.dataset.pace==='normal').attributes['aria-pressed'],'true');buttons.find(b=>b.dataset.pace==='hard').click();const reload=ui(u.saved);assert.equal(reload.exec('settings.pace'),'hard');reload.exec('startRun()');assert.equal(reload.exec('engine.speed'),18);
 });

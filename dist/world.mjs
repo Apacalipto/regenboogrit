@@ -82,7 +82,7 @@ export function makeRaisedRoute(route){
  return batch(group);
 }
 
-const PALETTES=[{name:'Wolkenkasteel',sky:'#e9dce9',fog:'#ede0ed'},{name:'De Elfjestuin',sky:'#d3e7e3',fog:'#e2eeea'},{name:'Roze Drakenvallei',sky:'#edcedd',fog:'#f0dbe7'},{name:'Het Sterrenpaleis',sky:'#cfcde8',fog:'#dddbef'}];
+const PALETTES=[{name:"Cloud Castle",sky:'#e9dce9',fog:'#ede0ed'},{name:"Fairy Garden",sky:'#d3e7e3',fog:'#e2eeea'},{name:"Pink Dragon Valley",sky:'#edcedd',fog:'#f0dbe7'},{name:"Star Palace",sky:'#cfcde8',fog:'#dddbef'}];
 export class World{
  constructor(container){
  this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));this.renderer.setSize(innerWidth,innerHeight);this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.35;container.appendChild(this.renderer.domElement);

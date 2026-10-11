@@ -27,7 +27,7 @@ test('empty choices remain empty after sanitation and block generating questions
  const plusOnly=sanitizeSettings({...DEFAULTS,topics:['plus'],tables:[]});assert.equal(practiceProblem(plusOnly),'');assert.equal(createQuestion(plusOnly,r).kind,'+');
 });
 test('migration enables the new group mix once, preserves pace/timer, and later retains disabled subjects',()=>{
- const migrated=migrateGameSettings({mode:'starter',group:5,pace:'calm',mathSeconds:60},2);assert.deepEqual(migrated.topics,DEFAULTS.topics);assert.equal(migrated.mode,'practice');assert.equal(migrated.pace,'calm');assert.equal(migrated.mathSeconds,60);
+ const migrated=migrateGameSettings({mode:'starter',group:5,pace:'calm',mathSeconds:60},2);assert.deepEqual(migrated.topics,DEFAULTS.topics);assert.equal(migrated.mode,'practice');assert.equal(migrated.pace,'easy');assert.equal(migrated.mathSeconds,60);
  const chosen={...migrated,topics:['plus'],range:37,tables:[3],factorMax:3};assert.deepEqual(migrateGameSettings(chosen,3),chosen);
  const malformed=sanitizeSettings({group:3,topics:['percent','plus','plus'],tables:[2,2,0,99,'4'],factorMax:Infinity,range:'20'});assert.deepEqual(malformed.topics,['plus']);assert.deepEqual(malformed.tables,[2]);assert.equal(malformed.range,20);assert.equal(malformed.factorMax,5);assert.equal(migrateGameSettings(null,3).group,5);
 });
