@@ -48,7 +48,7 @@ function ribbonGeometry(points,left,right,offset=0){
   const [za,ya]=points[i],[zb,yb]=points[i+1];if(Math.abs(za-zb)<.0001)continue;
   positions.push(left,ya+offset,za,right,ya+offset,za,right,yb+offset,zb,left,ya+offset,za,right,yb+offset,zb,left,yb+offset,zb);
  }
- const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.computeVertexNormals();return g;
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.computeVertexNormals();g.userData.rainbowDeck=true;return g;
 }
 export function makeRaisedRoute(route){
  const group=new THREE.Group(),points=routeProfile(route),width=2.38;
@@ -98,29 +98,31 @@ export class World{
  // A distant decorative rainbow has a cloud at each end.
  const rainbow=new THREE.Group();colors.forEach((c,i)=>{const m=new THREE.Mesh(new THREE.TorusGeometry(13-i*.42,.28,6,60,Math.PI),material(c));m.position.y=3;rainbow.add(m);});rainbow.position.set(-15,2,-77);rainbow.rotation.y=.13;this.scene.add(batch(rainbow));
  this.sparkles=new THREE.Group();for(let i=0;i<24;i++){const s=star(this.sparkles,(Math.random()-.5)*26,2+Math.random()*9,-Math.random()*70,.06+Math.random()*.1,'#fff3d3');s.userData.phase=Math.random()*7;s.castShadow=false;}this.scene.add(this.sparkles);
- this.obstacles=[];this.coins=[];this.gates=[];this.platforms=[];this.cameraHeight=0;this.templates={cloud:cloud(.72),arch:archObstacle(),dragon:dragon()};
+ this.obstacles=[];this.coins=[];this.gates=[];this.platforms=[];this.cameraHeight=0;this.gaitPhase=0;this.gaitWeight=0;this.templates={cloud:cloud(.72),arch:archObstacle(),dragon:dragon()};
  this.aura=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),new THREE.MeshBasicMaterial({color:'#fbe2aa',transparent:true,opacity:.13,depthWrite:false,side:THREE.DoubleSide}));this.aura.scale.set(1.5,2,1.8);this.aura.visible=false;this.scene.add(this.aura);
  this.trail=new THREE.Group();for(let i=0;i<25;i++){const s=star(this.trail,0,0,0,.1,'#ffe7a7');s.visible=false;s.castShadow=false;}this.scene.add(this.trail);
  this.menu=true;this.lastPalette=-1;this.time=0;this.target=new THREE.Vector3();this.resize=()=>{this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.renderer.setSize(innerWidth,innerHeight);};addEventListener('resize',this.resize);this.setCamera(true,1);
  }
- setCamera(menu,dt=1,height=0){this.cameraHeight+=(height*.68-this.cameraHeight)*Math.min(1,dt*3);const mobile=innerWidth<701;const viewKey=innerWidth+'x'+innerHeight+'-'+menu;if(this.viewKey!==viewKey){this.viewKey=viewKey;this.camera.fov=mobile&&!menu?62:43;if(mobile&&menu)this.camera.setViewOffset(innerWidth,innerHeight,0,innerHeight*.28,innerWidth,innerHeight);else this.camera.clearViewOffset();this.camera.updateProjectionMatrix();}let p,t;if(menu){p=mobile?[8.7,6.2,12.7]:[11.7,7.9,16.5];t=mobile?[0,1.25,-1.2]:[-3.9,1.5,-5];}else{p=mobile?[0,7.8,17]:[0,5.9,12.5];p[1]+=this.cameraHeight;t=[0,.9+this.cameraHeight,-12];}const a=Math.min(1,dt*4);this.camera.position.lerp(new THREE.Vector3(...p),a);this.target.lerp(new THREE.Vector3(...t),a);this.camera.lookAt(this.target);}
+ setCamera(menu,dt=1,height=0){this.cameraHeight=height*.68;const mobile=innerWidth<701;const viewKey=innerWidth+'x'+innerHeight+'-'+menu;if(this.viewKey!==viewKey){this.viewKey=viewKey;this.camera.fov=mobile&&!menu?62:43;if(mobile&&menu)this.camera.setViewOffset(innerWidth,innerHeight,0,innerHeight*.28,innerWidth,innerHeight);else this.camera.clearViewOffset();this.camera.updateProjectionMatrix();}let p,t;if(menu){p=mobile?[8.7,6.2,12.7]:[11.7,7.9,16.5];t=mobile?[0,1.25,-1.2]:[-3.9,1.5,-5];}else{p=mobile?[0,7.8,17]:[0,5.9,12.5];p[1]+=this.cameraHeight;t=[0,.9+this.cameraHeight,-12];}const a=1-Math.exp(-dt*6);this.camera.position.lerp(new THREE.Vector3(...p),a);this.target.lerp(new THREE.Vector3(...t),a);this.camera.lookAt(this.target);}
  setCoat(color){const old=this.unicorn;this.unicorn=makeUnicorn(color);this.unicorn.position.copy(old.position);this.unicorn.rotation.copy(old.rotation);this.scene.remove(old);this.scene.add(this.unicorn);}
  reset(){this.platforms.forEach(o=>this.scene.remove(o.group));this.platforms=[];this.cameraHeight=0;this.obstacles.forEach(o=>this.scene.remove(o.group));this.coins.forEach(o=>this.scene.remove(o.group));this.gates.forEach(o=>this.scene.remove(o.group));this.obstacles=[];this.coins=[];this.gates=[];for(const s of this.scenery)s.group.position.z=s.z;this.dashes.position.z=0;this.unicorn.position.set(0,0,0);this.unicorn.scale.setScalar(1);this.unicorn.rotation.set(0,0,0);}
  addPlatform(spec){const group=makeRaisedRoute(spec);group.position.set(spec.lane*2.8,0,spec.z);this.scene.add(group);const p={...spec,group};this.platforms.push(p);return p;}
  addObstacle(type,lane,z,baseY=0){const g=this.templates[type].clone(true);g.position.set(lane*2.8,baseY+(type==='cloud'?.38:0),z);this.scene.add(g);const obj={group:g,type,lane,z,length:type==='dragon'?5.9:1.4,hit:false};this.obstacles.push(obj);return obj;}
  addCoin(lane,z,y=.95){const g=star(this.scene,lane*2.8,y,z,.25);const c={group:g,lane,z,y,collected:false};this.coins.push(c);return c;}
  addGate(z=-75){const g=new THREE.Group();const ring=new THREE.Mesh(new THREE.TorusGeometry(4.8,.17,8,48,Math.PI),material('#fff0c6',{emissive:'#d7aeb2',emissiveIntensity:.2}));g.add(ring);for(const x of [-4.8,4.8]){tube(g,'#d4b5df',x,0,0,.18,1.4);star(g,x,.8,0,.27);}for(let i=0;i<7;i++){const a=i*Math.PI/6;star(g,Math.cos(a)*4.8,Math.sin(a)*4.8,0,.2);}g.position.z=z;this.scene.add(batch(g));this.gates.push({group:g,z});}
- clearAhead(distance=30){for(const key of ['obstacles','coins','gates','platforms']){this[key]=this[key].filter(o=>{if(o.z>-distance){this.scene.remove(o.group);return false;}return true;});}}
+ clearAhead(distance=30,keepSurface=false){for(const key of (keepSurface?['obstacles','coins','gates']:['obstacles','coins','gates','platforms'])){this[key]=this[key].filter(o=>{if(o.z>-distance){this.scene.remove(o.group);return false;}return true;});}}
  move(delta){this.dashes.position.z=(this.dashes.position.z+delta)%6;for(const s of this.scenery){s.group.position.z+=delta*.75;if(s.group.position.z>30)s.group.position.z-=170;}
  for(const key of ['obstacles','coins','gates','platforms']){this[key]=this[key].filter(o=>{o.z+=delta;o.group.position.z=o.z;if(o.z-(o.length||0)/2>20){this.scene.remove(o.group);return false;}return true;});}}
  update(dt,state){
  this.time+=dt;const t=this.time;this.menu=state.mode==='menu';this.setCamera(this.menu,dt,state.height||0);this.heroCastle.visible=this.menu;
  const moving=['run','boost','countdown'].includes(state.mode);
- const x=state.x||0,height=state.height??state.jump??0,duck=state.duck||false,boost=!!state.flying;
- this.unicorn.position.x=this.menu?(innerWidth<701?0:3):x;this.unicorn.scale.x=this.unicorn.scale.z=this.menu&&innerWidth>=701?1.6:1;this.unicorn.position.y=this.menu?Math.sin(t*2)*.045:height+(moving&&!boost&&state.grounded!==false?Math.abs(Math.sin(t*9))*.065:0);
+ const x=state.x||0,height=state.height??state.jump??0,duck=state.duck||false,boost=!!state.flying,pose=state.flightPose??(boost?1:0);
+ this.gaitPhase+=moving?dt*(8+(state.speed||12)*.18):0;
+ const gaitTarget=moving&&!boost&&state.grounded!==false?1:0;this.gaitWeight+=(gaitTarget-this.gaitWeight)*(1-Math.exp(-dt*12));
+ this.unicorn.position.x=this.menu?(innerWidth<701?0:3):x;this.unicorn.scale.x=this.unicorn.scale.z=this.menu&&innerWidth>=701?1.6:1;this.unicorn.position.y=this.menu?Math.sin(t*2)*.045:height+Math.abs(Math.sin(this.gaitPhase))*.045*this.gaitWeight;
  this.unicorn.rotation.y=THREE.MathUtils.lerp(this.unicorn.rotation.y,this.menu?-.62:(state.lean||0)*-.07,Math.min(1,dt*9));this.unicorn.rotation.z=THREE.MathUtils.lerp(this.unicorn.rotation.z,this.menu?0:(state.lean||0)*-.07,Math.min(1,dt*10));
- this.unicorn.scale.y=THREE.MathUtils.lerp(this.unicorn.scale.y,duck?.48:this.menu&&innerWidth>=701?1.6:1,Math.min(1,dt*18));this.unicorn.userData.legs.forEach((l,i)=>l.rotation.x=boost?(i%2?.8:-.6):moving?Math.sin(t*10+(i%2)*Math.PI)*.42:Math.sin(t*2+i)*.035);
- this.unicorn.userData.wings.visible=boost;this.unicorn.userData.wings.scale.y=boost?1+Math.sin(t*10)*.28:1;this.unicorn.rotation.x=boost?-.10:0;
+ this.unicorn.scale.y=THREE.MathUtils.lerp(this.unicorn.scale.y,duck?.48:this.menu&&innerWidth>=701?1.6:1,Math.min(1,dt*18));this.unicorn.userData.legs.forEach((l,i)=>{const walk=moving?Math.sin(this.gaitPhase+(i%2)*Math.PI)*.42:Math.sin(t*2+i)*.035;const target=walk*(1-pose)+(i%2?.8:-.6)*pose;l.rotation.x+=(target-l.rotation.x)*(1-Math.exp(-dt*18));});
+ this.unicorn.userData.wings.visible=pose>.002;this.unicorn.userData.wings.scale.set(pose,pose*(1+Math.sin(t*10)*.28),pose);this.unicorn.rotation.x=-.10*pose;
  this.aura.visible=boost||(state.shield||0)>0;this.aura.position.set(x,1.2+height,0);
  this.trail.children.forEach((s,i)=>{s.visible=boost;s.position.set(x+Math.sin(t*8+i)*.6,height+1.5+Math.sin(i+t*4)*.4,1+(i+t*9)%9);s.rotation.z=t+i;});
  for(const s of this.scenery)s.group.position.y=s.y+Math.sin(t*.55+s.phase)*.16;

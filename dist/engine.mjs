@@ -1,5 +1,5 @@
 import {speedAt,obstacleGap,generatePattern,rescueAllowed} from './rules.mjs';
-import {LANE_WIDTH,GRAVITY,JUMP_VELOCITY,FLIGHT_HEIGHT,surfaceAt,makeHeightSection,flightHeightAt,routeHeightAtLocal} from './course.mjs';
+import {LANE_WIDTH,GRAVITY,JUMP_VELOCITY,FLIGHT_HEIGHT,surfaceAt,makeHeightSection,flightHeightAt,routeHeightAtLocal,BOOST_LANDING_SECONDS,LANDING_CLEAR_SECONDS,flightSpeedMultiplierAt,flightPoseAt,flightDistanceAt} from './course.mjs';
 export class RunEngine{
  constructor(settings,rng=Math.random){
   this.settings={...settings};this.rng=rng;this.events=[];this.id=0;
@@ -7,7 +7,7 @@ export class RunEngine{
   this.stars=0;this.solved=0;this.independent=0;this.wrong=0;this.timedOut=0;
   this.usedRescues=0;this.lastRescue=null;this.lane=0;this.x=0;
   this.height=0;this.jump=0;this.vy=0;this.grounded=true;this.jumpTime=0;this.duckTime=0;
-  this.shield=1.5;this.boostTime=0;this.boostDuration=0;
+  this.shield=1.5;this.boostTime=0;this.boostDuration=0;this.landingStarted=false;this.landingClearUntil=0;this.speed=speedAt(0,settings.pace);
   this.obstacles=[];this.coins=[];this.platforms=[];this.nextSpawn=4;
   this.nextHeight=2;this.heightSections=0;this.heightZoneUntil=0;
   this.nextGate=25;this.gateShown=false;this.mathKind=null;this.questionAssisted=false;this.result=null;
@@ -22,7 +22,7 @@ export class RunEngine{
   if(a==='duck'&&this.grounded){this.duckTime=1.3;this.events.push({type:'duck'});}
  }
  resetHeight(){this.height=0;this.jump=0;this.vy=0;this.grounded=true;this.jumpTime=0;this.duckTime=0;}
- clear(){this.obstacles=[];this.coins=[];this.platforms=[];this.events.push({type:'clear'});}
+ clear(keepSurface=false){this.obstacles=[];this.coins=[];if(!keepSurface)this.platforms=[];this.events.push({type:'clear',keepSurface});}
  spawnObstacle(kind,lane,z,baseY=0,flightOnly=false){
   const o={id:++this.id,type:kind,lane,z,length:kind==='dragon'?5.9:1.4,baseY,flightOnly};
   this.obstacles.push(o);this.events.push({...o,type:'obstacle',kind});return o;
@@ -41,13 +41,15 @@ export class RunEngine{
   this.events.push({type:'heightRoute',first:this.heightSections===0,lane});this.heightSections++;
  }
  spawnBoostCourse(){
-  const speed=speedAt(this.elapsed,this.settings.pace)*3;
-  // Each row crosses the player only while flight is above every obstacle.
-  for(let arrival=.95,row=0;arrival<=this.boostDuration-.95;arrival+=.6,row++){
-   for(const lane of [-1,0,1])this.spawnObstacle((row+lane+3)%3===0?'arch':(row+lane+3)%3===1?'dragon':'cloud',lane,-speed*arrival,0,true);
-   this.spawnCoin(this.lane,-speed*arrival,FLIGHT_HEIGHT+.95);
+  // Stop spawning before descent; even the back of a dragon clears the landing lane.
+  const powered=this.boostDuration-BOOST_LANDING_SECONDS;
+  for(let arrival=1.05,row=0;arrival<=powered-.5;arrival+=.6,row++){
+   const z=-flightDistanceAt(arrival,this.boostDuration,t=>speedAt(this.elapsed+t,this.settings.pace));
+   for(const lane of [-1,0,1])this.spawnObstacle((row+lane+3)%3===0?'arch':(row+lane+3)%3===1?'dragon':'cloud',lane,z,0,true);
+   this.spawnCoin(this.lane,z,FLIGHT_HEIGHT+.95);
   }
  }
+ get flightPose(){return this.mode==='boost'||this.mode==='paused'&&this.previousMode==='boost'?flightPoseAt(this.boostDuration-this.boostTime,this.boostDuration):0;}
  moveObjects(delta){
   for(const group of [this.obstacles,this.coins,this.platforms])for(const o of group)o.z+=delta;
   this.obstacles=this.obstacles.filter(o=>o.z<20);
@@ -74,30 +76,40 @@ export class RunEngine{
   this.jump=this.height;this.jumpTime=Math.max(0,this.jumpTime-dt);return true;
  }
  step(dt){
-  dt=Math.min(Math.max(dt,0),.06);
+  // Stable physics and swept movement, including low-frame-rate mobile devices.
+  let remaining=Math.min(Math.max(dt,0),.06);
+  while(remaining>1e-8){const slice=Math.min(remaining,1/120);this.tick(slice);remaining-=slice;}
+ }
+ tick(dt){
   if(this.mode==='countdown'){
    const before=Math.ceil(this.countdown);this.countdown-=dt;
    if(Math.ceil(this.countdown)!==before&&this.countdown>0)this.events.push({type:'countdown',value:Math.ceil(this.countdown)});
    if(this.countdown<=0){this.mode='run';this.events.push({type:'started'});}return;
   }
   if(this.mode!=='run'&&this.mode!=='boost')return;
-  this.elapsed+=dt;this.shield=Math.max(0,this.shield-dt);
+  const beforeElapsed=this.elapsed;this.elapsed+=dt;this.shield=Math.max(0,this.shield-dt);
   this.x+=(this.lane*LANE_WIDTH-this.x)*Math.min(1,dt*15);
   this.duckTime=Math.max(0,this.duckTime-dt);
-  const boosted=this.mode==='boost',speed=speedAt(this.elapsed,this.settings.pace)*(boosted?3:1),delta=speed*dt;
+  const boosted=this.mode==='boost',flightTime=this.boostDuration-this.boostTime;
+  const beforeSpeed=speedAt(beforeElapsed,this.settings.pace)*(boosted?flightSpeedMultiplierAt(flightTime,this.boostDuration):1);
+  const speed=speedAt(this.elapsed,this.settings.pace)*(boosted?flightSpeedMultiplierAt(flightTime+dt,this.boostDuration):1),delta=(beforeSpeed+speed)*.5*dt;this.speed=speed;
   this.distance+=delta;this.events.push({type:'move',delta});this.moveObjects(delta);
   if(boosted){
    this.boostTime=Math.max(0,this.boostTime-dt);
    this.height=flightHeightAt(this.boostDuration-this.boostTime,this.boostDuration);this.jump=this.height;
    this.collectCoins();
-   if(this.boostTime<=0){this.mode='run';this.resetHeight();this.shield=1.7;this.nextSpawn=this.elapsed+2;this.nextHeight=this.elapsed+3;this.events.push({type:'boostEnd'});}return;
+   if(!this.landingStarted&&this.boostTime<=BOOST_LANDING_SECONDS){this.landingStarted=true;this.events.push({type:'landing'});}
+   if(this.boostTime<=1e-8){
+    this.mode='run';this.resetHeight();this.landingClearUntil=this.elapsed+LANDING_CLEAR_SECONDS;this.shield=LANDING_CLEAR_SECONDS;
+    this.nextSpawn=this.landingClearUntil;this.nextHeight=this.landingClearUntil+1;this.events.push({type:'boostEnd'});
+   }return;
   }
   if(this.elapsed>=this.nextGate){this.openMath('boost');return;}
   if(!this.gateShown&&this.nextGate-this.elapsed<4.8){
-   this.gateShown=true;this.clear();this.resetHeight();this.events.push({type:'gate',z:-speed*4.8});
+   this.gateShown=true;this.clear(true);this.events.push({type:'gate',z:-speed*4.8});
   }
-  if(this.elapsed>=this.nextHeight&&this.nextGate-this.elapsed>17&&this.platforms.length===0)this.spawnHeightSection(speed);
-  if(this.elapsed>=this.nextSpawn&&this.elapsed>this.heightZoneUntil&&this.nextGate-this.elapsed>11){
+  if(this.elapsed>=this.landingClearUntil&&this.elapsed>=this.nextHeight&&this.nextGate-this.elapsed>17&&this.platforms.length===0)this.spawnHeightSection(speed);
+  if(this.elapsed>=this.landingClearUntil&&this.elapsed>=this.nextSpawn&&this.elapsed>this.heightZoneUntil&&this.nextGate-this.elapsed>11){
    this.nextSpawn=this.elapsed+obstacleGap(this.elapsed,this.settings.pace);
    const pattern=generatePattern(this.elapsed,this.settings.pace,this.rng);
    for(const item of pattern)this.spawnObstacle(item.type,item.lane,-65);
@@ -125,7 +137,7 @@ export class RunEngine{
    this.nextSpawn=this.elapsed+.2;this.heightZoneUntil=0;this.nextHeight=this.elapsed+8;this.nextGate=this.elapsed+34;this.gateShown=false;
    this.countdown=3;this.mode='countdown';this.events.push({type:'rescued',reward});this.events.push({type:'countdown',value:3});
   }else{
-   this.mode='boost';this.boostDuration=this.questionAssisted?2.5:4;this.boostTime=this.boostDuration;this.resetHeight();
+   this.mode='boost';this.boostDuration=(this.questionAssisted?2.5:4)+BOOST_LANDING_SECONDS;this.boostTime=this.boostDuration;this.landingStarted=false;this.resetHeight();
    this.nextGate=this.elapsed+35+this.rng()*8;this.gateShown=false;this.spawnBoostCourse();this.events.push({type:'boost',reward});
   }
  }

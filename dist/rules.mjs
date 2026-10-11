@@ -26,7 +26,7 @@ export function createQuestion(s,r=Math.random){
  return make(int(1,100,r)/10,int(1,100,r)/10,'+');
 }
 export function answerMatches(value,answer){if(typeof value!=='string'||!/^\d+(?:[.,]\d+)?$/.test(value.trim()))return false;return Math.abs(Number(value.replace(',','.'))-answer)<1e-8;}
-export function speedAt(seconds,pace){return pace==='calm'?9+Math.min(seconds/600,1)*5:12+Math.min(seconds/600,1)*14.4;}
-export function obstacleGap(seconds,pace){return pace==='calm'?3.7-Math.min(seconds/600,1)*.8:3.15-Math.min(seconds/600,1)*1.25;}
+export function speedAt(seconds,pace){const t=Math.max(0,Math.min(seconds,600));return pace==='calm'?9+t/600*5:12+14*(1-Math.exp(-t/65))/(1-Math.exp(-600/65))+8*t/600;}
+export function obstacleGap(seconds,pace){const t=Math.max(0,Math.min(seconds,600));return pace==='calm'?3.7-t/600*.8:2.8-.8*(1-Math.exp(-t/70))-.4*t/600;}
 export function rescueAllowed(used,timeSinceRescue){return used<3&&(timeSinceRescue===null||timeSinceRescue>=5);}
 export function generatePattern(seconds,pace,r=Math.random){const lane=int(-1,1,r),type=pick(seconds<40?['cloud','arch']:['cloud','arch','dragon'],r);const result=[{lane,type}];if(seconds>110&&r()<(pace==='calm'?.25:.55)){const other=pick([-1,0,1].filter(n=>n!==lane),r);result.push({lane:other,type:'dragon'});}return result;}
