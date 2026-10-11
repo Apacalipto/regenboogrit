@@ -15,8 +15,32 @@
  <div class="menu-copy"><span class="eyebrow"><span></span> KLEINE STAPJES, GROOTSE AVONTUREN</span><h1>Eenhoorn aan.<br><em>Magie aan.</em></h1><p class="intro">Hobbel over de regenboog. Los een sommetje op.<br class="desktop-only"> En vlieg naar de sterren.</p>
  <section class="settings-card" aria-label="Kies je avontuur">
  <div class="section-label"><span>01</span><h2>Wat gaan we oefenen?</h2><span class="mini-star">✧</span></div>
- <div class="mode-tabs" role="group" aria-label="Soort rekensommen"><button data-mode="starter" class="selected" aria-pressed="true">Kleine tafels</button><button data-mode="tables" aria-pressed="false">Tafels</button><button data-mode="arithmetic" aria-pressed="false">Plus & min</button><button data-mode="group" aria-pressed="false">Groepenmix</button></div>
- <div id="mode-options"></div>
+ <div id="group-chips" class="group-choices" role="group" aria-label="Welke groep wil je oefenen?"></div>
+ <p id="group-help" class="option-help"></p>
+ <div class="practice-heading"><h3>Dit oefenen we</h3><button id="reset-practice" type="button">Herstel standaard</button></div>
+ <p class="option-help topic-help">Vink uit wat je nog niet wilt oefenen.</p>
+ <div id="topic-chips" class="topic-choices" role="group" aria-label="Soorten sommen aan of uit"></div>
+ <details id="practice-settings" class="practice-settings">
+ <summary><span>Sommen en tafels aanpassen</span><span aria-hidden="true">⌄</span></summary>
+ <div class="practice-inner">
+ <section id="number-settings" aria-labelledby="range-label">
+ <h3 id="range-label">Plus en min: getallen onder…</h3>
+ <div id="range-chips" class="chips" role="group" aria-label="Bovengrens voor plus en min"></div>
+ <div class="custom-range"><label for="custom-range">Of kies zelf</label><input id="custom-range" type="number" min="2" max="10000" step="1" inputmode="numeric" aria-describedby="range-help range-error"><span>max. 10.000</span></div>
+ <p id="range-help" class="option-help">Beide getallen én het antwoord blijven onder deze grens. Geen negatieve antwoorden.</p>
+ <p id="range-error" class="selection-error" role="status" hidden></p>
+ </section>
+ <section id="table-settings" aria-labelledby="tables-label">
+ <h3 id="tables-label">Welke tafels?</h3>
+ <div id="table-chips" class="chips table-choices" role="group" aria-label="Kies de tafels die je wilt oefenen"></div>
+ <h3>Hoe ver binnen elke tafel?</h3>
+ <div id="factor-chips" class="chips" role="group" aria-label="Hoogste vermenigvuldiger"></div>
+ <p id="table-help" class="option-help"></p>
+ </section>
+ </div>
+ </details>
+ <p id="practice-summary" class="practice-summary"></p>
+ <p id="practice-error" class="selection-error" role="status" hidden></p>
  <details id="advanced-settings" class="advanced-settings">
  <summary><span>⚙</span> Geavanceerde instellingen <span class="advanced-chevron">⌄</span></summary>
  <div class="advanced-inner">

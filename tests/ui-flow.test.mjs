@@ -38,3 +38,27 @@ test('end screen shows the saved highscore after a lower run and after reloading
  u.exec("startRun();engine.distance=700;engine.finish('answer');processEvents();");assert.equal(u.nodes.get('end-best-distance').textContent,'1.542');assert.equal(u.nodes.get('end-distance').textContent,'700');
  const reload=ui(u.saved);reload.exec("startRun();engine.distance=12;engine.finish('quick');processEvents();");assert.equal(reload.nodes.get('end-best-distance').textContent,'1.542');assert(reload.nodes.get('end-best').textContent.includes('op dit apparaat'));
 });
+
+const choose=(u,id,key)=>{const button=u.nodes.get(id).children.find(b=>b.dataset.choice===String(key));assert(button,'choice '+id+' '+key+' exists');button.click();};
+test('group menu starts at grade 5, resets to each chosen group, and keeps timer and pace separate',()=>{
+ const u=ui();assert.equal(u.exec('settings.group'),5);assert.equal(u.nodes.get('topic-chips').children.length,4);assert(u.nodes.get('topic-chips').children.every(b=>b.attributes['aria-pressed']==='true'));
+ u.exec("settings.mathSeconds=60;settings.pace='calm'");choose(u,'topic-chips','minus');choose(u,'group-chips',3);assert.equal(u.exec('settings.group'),3);assert.equal(u.exec('settings.range'),20);assert.equal(u.nodes.get('topic-chips').children.length,2);assert(u.nodes.get('topic-chips').children.every(b=>b.attributes['aria-pressed']==='true'));assert.equal(u.exec('settings.mathSeconds'),60);assert.equal(u.exec('settings.pace'),'calm');
+ choose(u,'group-chips',4);assert.equal(u.exec('settings.range'),100);assert.equal(u.exec('JSON.stringify(settings.tables)'),'[1,2,5,10]');choose(u,'group-chips',6);assert.equal(u.nodes.get('topic-chips').children.length,5);
+});
+test('UI honors disabled topics, selected tables and factor ceiling through questions and reload',()=>{
+ const u=ui();choose(u,'topic-chips','plus');choose(u,'topic-chips','minus');choose(u,'topic-chips','divide');for(const n of [1,2,4,5])choose(u,'table-chips',n);choose(u,'factor-chips',3);
+ for(let i=0;i<100;i++){const q=u.exec('nextQuestion()');assert.equal(q.topic,'tables');assert.equal(q.b,3);assert(q.a<=3);}
+ const reload=ui(u.saved);assert.equal(reload.exec('JSON.stringify(settings.topics)'),'["tables"]');assert.equal(reload.exec('JSON.stringify(settings.tables)'),'[3]');assert.equal(reload.exec('settings.factorMax'),3);assert.equal(reload.nodes.get('number-settings').hidden,true);assert.equal(reload.nodes.get('play-button').disabled,false);
+ reload.nodes.get('reset-practice').click();assert.equal(reload.exec('settings.topics.length'),4);assert.equal(reload.exec('settings.factorMax'),5);
+});
+test('all-off and no-table selections disable Start, survive reload, and can be repaired',()=>{
+ const u=ui();for(const t of ['plus','minus','tables','divide'])choose(u,'topic-chips',t);assert.equal(u.nodes.get('play-button').disabled,true);assert.equal(u.nodes.get('practice-error').hidden,false);u.nodes.get('play-button').click();assert.equal(u.exec('engine'),null);
+ const reload=ui(u.saved);assert.equal(reload.nodes.get('play-button').disabled,true);choose(reload,'topic-chips','tables');for(const n of [1,2,3,4,5])choose(reload,'table-chips',n);assert.equal(reload.nodes.get('play-button').disabled,true);assert.equal(ui(reload.saved).exec('settings.tables.length'),0);choose(reload,'table-chips',3);assert.equal(reload.nodes.get('play-button').disabled,false);
+});
+test('custom upper bounds update actual questions; invalid input cannot start a run',()=>{
+ const u=ui();for(const t of ['minus','tables','divide'])choose(u,'topic-chips',t);const input=u.nodes.get('custom-range');input.value='37';input.oninput();for(let i=0;i<100;i++){const q=u.exec('nextQuestion()');assert.equal(q.kind,'+');assert(q.a<37&&q.b<37&&q.answer<37);}assert.equal(ui(u.saved).exec('settings.range'),37);
+ for(const value of ['', '1','-10','3.5','10001']){input.value=value;input.oninput();assert.equal(u.nodes.get('play-button').disabled,true);assert.equal(u.nodes.get('range-error').hidden,false);}input.value='20';input.oninput();assert.equal(u.nodes.get('play-button').disabled,false);assert.equal(u.nodes.get('range-error').hidden,true);
+});
+test('previously queued mistakes cannot reintroduce a disabled subject or excluded table',()=>{
+ const u=ui();u.exec("data.review=[{profile:profileKey(settings),wait:0,question:{key:'blocked',prompt:'5 × 5',topic:'tables',answer:25}}]");choose(u,'topic-chips','tables');choose(u,'topic-chips','divide');choose(u,'topic-chips','minus');for(let i=0;i<30;i++)assert.equal(u.exec('nextQuestion().topic'),'plus');assert.equal(u.exec('data.review.length'),1);
+});
